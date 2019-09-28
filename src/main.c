@@ -45,6 +45,7 @@ void initialize(const char * dir, const char * shadow, const char * passes){
 	if (stat(shadow, &st) == -1){
 		FILE * shadowptr = fopen(shadow, "w");
 		fputs("\n", shadowptr);
+		chmod(shadow, 0600);
 	}
 	else {
 		printf("~/.pwmgr/shadow.pw already exists\n");
@@ -53,6 +54,7 @@ void initialize(const char * dir, const char * shadow, const char * passes){
 	if (stat(passes, &st) == -1){
 		FILE * passesptr = fopen(passes, "w");
 		fputs("[]", passesptr);
+		chmod(passes, 0600);
 	}
 	else {
 		printf("~/.pwmgr/passes.pw already exists\n");
@@ -62,7 +64,6 @@ void initialize(const char * dir, const char * shadow, const char * passes){
 int main(int argc, const char * argv[]){
 	// Main function.
 
-	char * user = getenv("USER");
 	char * home = getenv("HOME");
 	char dir[46] = { 0 };
 	char shadow[55] = { 0 };
@@ -79,7 +80,7 @@ int main(int argc, const char * argv[]){
 
 	printf("%d\n", is_initialized(dir, shadow, passes));
 	initialize(dir, shadow, passes);
-	printf("%s\n%s\n%s\n", user, home, dir);
+	printf("%s\n%s\n", home, dir);
 	printf("%d\n", is_initialized(dir, shadow, passes));
 
 	return 0;
