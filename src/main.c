@@ -1,8 +1,11 @@
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <gcrypt.h>
+//#include <json.h>
 
 int is_initialized(const char * dir, const char * shadow, const char * passes){
 	/* Function to tell if:
@@ -14,6 +17,9 @@ int is_initialized(const char * dir, const char * shadow, const char * passes){
 			if (access(passes, F_OK) != -1){
 				return 0;
 			}
+			else {
+				return 1;
+			}
 		}
 		else {
 			return 1;
@@ -21,6 +27,35 @@ int is_initialized(const char * dir, const char * shadow, const char * passes){
 	}
 	else {
 		return 1;
+	}
+}
+
+void initialize(const char * dir, const char * shadow, const char * passes){
+	// Create the necessary files and directory.
+
+	struct stat st = { 0 };
+
+	if (stat(dir, &st) == -1){
+		mkdir(dir, 0700);
+	}
+	else {
+		printf("~/.pwmgr already exists\n");
+	}
+
+	if (stat(shadow, &st) == -1){
+		FILE * shadowptr = fopen(shadow, "w");
+		fputs("\n", shadowptr);
+	}
+	else {
+		printf("~/.pwmgr/shadow.pw already exists\n");
+	}
+
+	if (stat(passes, &st) == -1){
+		FILE * passesptr = fopen(passes, "w");
+		fputs("[]", passesptr);
+	}
+	else {
+		printf("~/.pwmgr/passes.pw already exists\n");
 	}
 }
 
@@ -42,6 +77,8 @@ int main(int argc, const char * argv[]){
 	strncpy(passes, dir, strlen(dir));
 	strncat(passes, "/passes.pw", strlen("/passes.pw"));
 
+	printf("%d\n", is_initialized(dir, shadow, passes));
+	initialize(dir, shadow, passes);
 	printf("%s\n%s\n%s\n", user, home, dir);
 	printf("%d\n", is_initialized(dir, shadow, passes));
 
