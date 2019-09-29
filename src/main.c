@@ -69,6 +69,7 @@ void initialize(const char * dir, const char * shadow, const char * passes){
 	}
 	
 	if (initialized < 1){
+		// REPLACE. THIS. WITH. SOMETHING. ELSE. USE TERMIOS OR SOMETHING.
 		passwd = getpass("Create a password: ");
 		repeat = getpass("Confirm your password: ");
 		if (strcmp(passwd, repeat) == 0){
