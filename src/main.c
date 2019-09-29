@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <gcrypt.h>
-//#include <json.h>
+#include <json/json.h>
 
 int is_initialized(const char * dir, const char * shadow, const char * passes){
 	/* Function to tell if:
