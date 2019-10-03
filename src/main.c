@@ -8,6 +8,7 @@
 //#include <json/json.h>
 #include <termios.h>
 #include <dirent.h>
+#include <errno.h>
 
 char * HELP = "pwmgr-c: a WIP password manager, written in C\n\
 \n\
@@ -55,6 +56,12 @@ void set_input_mode(){
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &tattr);
 }
 
+/*char * hash(const char * input){
+	gcry_error_t gcry_md_open()
+
+	return output;
+}*/
+
 int is_initialized(const char * dir, const char * shadow, const char * passes){
 	/* Function to tell if:
 	    a. The directory exists and
@@ -75,6 +82,43 @@ int is_initialized(const char * dir, const char * shadow, const char * passes){
 	}
 	else {
 		return 1;
+	}
+}
+
+void sanitize(const char * dir){
+	// Remove the folder and any files inside.
+
+	DIR * dirp = opendir(dir);
+	struct dirent * entry;
+
+	if (dirp) {
+		while ((entry = readdir(dirp)) != NULL){
+			//printf("%s\n", entry->d_name);
+			if (strcmp(entry->d_name, "..") == 0 ||
+				strcmp(entry->d_name, ".")  == 0){
+				continue;
+			}
+			else {
+				char filename[strlen(dir) + strlen(entry->d_name) + 1];
+				strncpy(filename, dir, strlen(dir)+1);
+				strncat(filename, "/", 2);
+				strncat(filename, entry->d_name, strlen(entry->d_name)+1);
+				strncat(filename, "\0", 1);
+				printf("rm: %s\n", filename);
+				remove(filename);
+			}
+		}
+		closedir(dirp);
+		printf("rmdir: %s\n", dir);
+		rmdir(dir);
+	}
+	else if (ENOENT == errno){
+		printf("Directory doesn't exist. Probably not initialized.\n");
+		exit(1);
+	}
+	else {
+		printf("Unknown error.\n");
+		exit(100);
 	}
 }
 
@@ -122,10 +166,12 @@ void initialize(const char * dir, const char * shadow, const char * passes){
 
 		printf("Create a password: ");
 		fgets(passwd, 100, stdin);
-		printf("\npasswd = %s\n", passwd);
+		printf("\n");
+		//printf("\npasswd = %s\n", passwd); // debug print statement
 		printf("Repeat your password: ");
 		fgets(repeat, 100, stdin);
-		printf("\nrepeat = %s\n", repeat);
+		printf("\n");
+		//printf("\nrepeat = %s\n", repeat); // debug print statement
 
 		reset_input_mode();
 		if (strcmp(passwd, repeat) == 0){
@@ -138,31 +184,20 @@ void initialize(const char * dir, const char * shadow, const char * passes){
 		}
 		else {
 			// Passwords DO NOT MATCH
+			printf("Passwords didn't match. Try again.\n");
+			sanitize(dir);
 			exit(1);
 		}
 	}
-}
-
-void sanitize(const char * dir){
-	// Remove the folder and any files inside.
-
-	DIR * dirp = opendir(dir);
-	struct dirent * entry;
-
-	while ((entry = readdir(dirp)) != NULL){
-		remove(entry->d_name);
-	}
-	closedir(dirp);
-	rmdir(dir);
 }
 
 int main(int argc, const char * argv[]){
 	// Main function.
 
 	char * home = getenv("HOME");
-	char dir[46] = { 0 };
-	char shadow[55] = { 0 };
-	char passes[55] = { 0 };
+	char dir[256] = { 0 };
+	char shadow[256] = { 0 };
+	char passes[256] = { 0 };
 
 	strncpy(dir, home, strlen(home));
 	strncat(dir, "/.pwmgr", strlen("/.pwmgr")+1);
@@ -205,7 +240,7 @@ int main(int argc, const char * argv[]){
 			printf("Not implemented yet.\n");
 		}
 		else if (strcmp(argv[1], "sanitize") == 0){
-			printf("Not implemented yet.\n");
+			sanitize(dir);
 		}
 		else{
 			printf("Argument not recognized: `%s`\n", argv[1]);
