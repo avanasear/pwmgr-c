@@ -56,11 +56,23 @@ void set_input_mode(){
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &tattr);
 }
 
-/*char * hash(const char * input){
-	gcry_error_t gcry_md_open()
+int hash(const char * input, const char * shadow){
+	//int i;
+	//int hashlen = gcry_md_get_algo_dlen(GCRY_MD_SHA512);
 
-	return output;
-}*/
+	gcry_md_hd_t * hd;
+	gcry_md_open(hd, GCRY_MD_SHA512, GCRY_MD_FLAG_SECURE);
+	gcry_md_write(*hd, input, strlen(input));
+
+	unsigned char * hashout = gcry_md_read(*hd, GCRY_MD_SHA512);
+
+	FILE * shadowp = fopen(shadow, "wb");
+	fwrite(hashout, sizeof(hashout[0]), 64, shadowp);
+	fclose(shadowp);
+	printf("\n");
+
+	return 0;
+}
 
 int is_initialized(const char * dir, const char * shadow, const char * passes){
 	/* Function to tell if:
@@ -176,11 +188,7 @@ void initialize(const char * dir, const char * shadow, const char * passes){
 		reset_input_mode();
 		if (strcmp(passwd, repeat) == 0){
 			// Passwords MATCH
-			FILE * shadowptr = fopen(shadow, "w");
-			// hash the password
-			//gcry_md_open(GCRY_MD_SHA512, 1, )
-			// fputs(hash, shadow);
-			fclose(shadowptr);
+			hash(passwd, shadow);
 		}
 		else {
 			// Passwords DO NOT MATCH
@@ -244,6 +252,7 @@ int main(int argc, const char * argv[]){
 		}
 		else{
 			printf("Argument not recognized: `%s`\n", argv[1]);
+			printf("Try `pwmgr help`.\n");
 		}
 	}
 	else {
