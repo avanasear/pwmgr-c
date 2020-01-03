@@ -22,23 +22,23 @@ void set_input_mode();
 
 int init(); // not finished yet
 int deinit(); // not finished yet
-int is_initialized(); // not finished yet
+int check_is_initialized(); // not finished yet
 
 int load_file(); // not finished yet
 int write_file(); // not finished yet
 
-int encrypt_mem(); // not finished yet
-int decrypt_mem(); // not finished yet
+int encrypt_mem();
+int decrypt_mem();
 
 int get_pass(char * passwd, int len, int context);
-int get_key(char * passwd, unsigned char * key); // not finished yet
+int get_key(char * passwd, unsigned char * key);
 
 int main(){
     char * user = getenv("USER");
     char * homedir = getenv("HOME");
     printf("You are %s.\nYour home directory is %s.\n", user, homedir);
+    umask(0077);
 
-    deinit();
     init();
 
     memset(plain_contents, 0x00, 2097152);
@@ -48,26 +48,47 @@ int main(){
 
 void reset_input_mode(){
     // Show characters on stdin again.
+
     tcsetattr(STDIN_FILENO, TCSANOW, &old);
 }
 
 void set_input_mode(){
     // Stop showing characters on stdin.
+
     if (!isatty (STDIN_FILENO)){
         fprintf(stderr, "Not a terminal.\n");
         exit(1);
     }
+
     tcgetattr(STDIN_FILENO, &old);
     atexit(reset_input_mode);
     tcgetattr(STDIN_FILENO, &new);
+
     new.c_lflag &= ~(ICANON | ECHO);
     new.c_cc[VMIN] = 1;
     new.c_cc[VTIME] = 0;
+
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &new);
 }
 
 int init(){
     // Create the pwmgr file
+
+    if (check_is_initialized() == 0){
+        char response[16] = {0};
+        printf("The password file is already initialized.\n");
+        printf("Do you want to reinitialize? [y/N] ");
+        fgets(response, 16, stdin);
+        fflush(stdin);
+
+        if ((memcmp(response, "y", 1)) & (memcmp(response, "Y", 1))){
+            printf("Not reinitializing.\n");
+            exit(1);
+        }
+
+        deinit();
+    }
+
     char * signature = "-PWMGR-\n";
     memcpy(plain_contents, signature, strlen(signature));
 
@@ -78,7 +99,7 @@ int init(){
     get_pass(passwd_2, 256, 1);
 
     if (strncmp(passwd_1, passwd_2, 256) != 0){
-        perror("Passwords don't match!\n");
+        printf("Passwords don't match!\n");
         exit(1);
     }
 
@@ -93,79 +114,97 @@ int init(){
 
 int deinit(){
     // Delete the pwmgr file in preparation for uninstall
+
     char pwfile[256] = {0};
     strncpy(pwfile, getenv("HOME"), strlen(getenv("HOME")));
     strncat(pwfile, "/.pwmgr", 8);
     remove(pwfile);
 }
 
-int is_initialized(){
-    // Check to see if the file exists already
+int check_is_initialized(){
+    // Check to see if the file exists, has the right permissions, etc
+
     char pwfile[256] = {0};
     strncpy(pwfile, getenv("HOME"), strlen(getenv("HOME")));
     strncat(pwfile, "/.pwmgr", 8);
 
-    struct stat pwfile_info;
-    switch (pwfile_info.st_mode & S_IFMT) {
-        case S_IFBLK:
-            perror("Error: ~/.pwmgr is not a regular file (block device).\n");
-            exit(1);
-        case S_IFCHR:
-            perror("Error: ~/.pwmgr is not a regular file (character device).\n");
-            exit(1);
-        case S_IFDIR:
-            perror("Error: ~/.pwmgr is not a regular file (directory).\n");
-            exit(1);
-        case S_IFIFO:
-            perror("Error: ~/.pwmgr is not a regular file (FIFO/pipe).\n");
-            exit(1);
-        case S_IFLNK:
-            perror("Error: ~/.pwmgr is not a regular file (symlink).\n");
-            exit(1);
-        case S_IFREG:
-            break;
-        case S_IFSOCK:
-            perror("Error: ~/.pwmgr is not a regular file (socket).\n");
-            exit(1);
-        default:
-            perror("Error: ~/.pwmgr is an unknown filetype.\n");
-            exit(1);
+    if (access(pwfile, F_OK) == -1){
+        return 1;
     }
 
-    if (pwfile_info.st_mode != 0600){
+    struct stat pwfile_info;
+    stat(pwfile, &pwfile_info);
+
+    if (!(S_ISREG(pwfile_info.st_mode))){
+        printf("Error: ~/.pwmgr is not a regular file.");
+        exit(1);
+    }
+
+    if (!(pwfile_info.st_uid == getuid())){
+        printf("Error: You do not own ~/.pwmgr.\n");
+        exit(1);
+    }
+
+    if ((pwfile_info.st_mode & 0200) != 0200){
+        printf("Error: You don't have write access on ~/.pwmgr.\n");
+        exit(1);
+    }
+
+    if (pwfile_info.st_size != 2097168){
+        printf("Error: File is the wrong size and has been modified.\n");
+        printf("We'll try to continue, but be aware you may have to\n");
+        printf("delete and reinitialize the password file.\n");
+    }
+
+    if ((pwfile_info.st_mode & 0777) != 0600){
         printf("The permissions on ~/.pwmgr are incorrect.\n\n");
         printf("Please be aware that someone may be able to modify\n");
         printf("or destroy data in your password file, preventing you\n");
         printf("from being able to recover your passwords.\n\n");
-        printf("It is recommended that you run `chmod 600 ~/.pwmgr`.\n");
+        printf("This could also cause issues writing the file.\n\n");
+        printf("It is recommended that you run `chmod 600 ~/.pwmgr`.\n\n");
     }
+
     return 0;
 }
 
 int load_file(){
     // Load the contents of the file into cipher_contents
+
     char pwfile[256] = {0};
     strncpy(pwfile, getenv("HOME"), strlen(getenv("HOME")));
     strncat(pwfile, "/.pwmgr", 8);
 
     FILE * fptr = fopen(pwfile, "rb");
-    fread(cipher_contents, 1, 2097168, fptr);
-    fclose(fptr);
+    if (fptr == NULL){
+        perror("An error occurred while trying to load ~/.pwmgr:\n");
+    }
+    else {
+        fread(cipher_contents, 1, 2097168, fptr);
+        fclose(fptr);
+    }
 }
 
 int write_file(){
     // Write cipher_contents to the pwfile
+
     char pwfile[256] = {0};
     strncpy(pwfile, getenv("HOME"), strlen(getenv("HOME")));
     strncat(pwfile, "/.pwmgr", 8);
 
     FILE * fptr = fopen(pwfile, "wb");
-    fwrite(cipher_contents, 1, 2097168, fptr);
-    fclose(fptr);
+    if (fptr == NULL){
+        perror("An error occurred while trying to write ~/.pwmgr:\n");
+    }
+    else {
+        fwrite(cipher_contents, 1, 2097168, fptr);
+        fclose(fptr);
+    }
 }
 
 int encrypt_mem(){
     // Encrypt the plaintext buf and write the result to the ciphertext buf
+
     unsigned char iv[16] = {0};
     unsigned char orig_iv[16] = {0};
     AES_KEY enc_key;
@@ -184,6 +223,7 @@ int encrypt_mem(){
 
 int decrypt_mem(){
     // Decrypt the ciphertext buf and write the result to the plaintext buf
+
     unsigned char iv[16] = {0};
     memcpy(iv, &cipher_contents[2097152], 16);
 
@@ -228,9 +268,9 @@ int get_key(char * passwd, unsigned char * key){
     unsigned char salt[32] = {0};
     getrandom(salt, 32, 0);
 
-    int N = 1024;
+    int N = 16384;
     int r = 8;
-    int p = 128;  // must be less than (2^32 - 1) * hlen/MFlen
+    int p = 4;  // must be less than (2^32 - 1) * hlen/MFlen
                   // hlen = 32 (32 bytes, 256 bits)
                   // MFlen = r * 128 per RFC7914
 
