@@ -20,9 +20,9 @@ unsigned char aes_key[32] = {0}; // 256-bit key
 void reset_input_mode();
 void set_input_mode();
 
-int init(); // not finished yet
+int init();
 int deinit(); // not finished yet
-int check_is_initialized(); // not finished yet
+int check_is_initialized();
 
 int load_file(); // not finished yet
 int write_file(); // not finished yet
