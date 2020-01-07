@@ -151,13 +151,13 @@ int check_is_initialized(){
     }
 
     if (pwfile_info.st_size != 2097168){
-        printf("Error: File is the wrong size and has been modified.\n");
+        printf("\nError: File is the wrong size and has been modified.\n\n");
         printf("We'll try to continue, but be aware you may have to\n");
-        printf("delete and reinitialize the password file.\n");
+        printf("delete and reinitialize the password file.\n\n");
     }
 
     if ((pwfile_info.st_mode & 0777) != 0600){
-        printf("The permissions on ~/.pwmgr are incorrect.\n\n");
+        printf("\nThe permissions on ~/.pwmgr are incorrect.\n\n");
         printf("Please be aware that someone may be able to modify\n");
         printf("or destroy data in your password file, preventing you\n");
         printf("from being able to recover your passwords.\n\n");
@@ -270,7 +270,7 @@ int get_key(char * passwd, unsigned char * key){
 
     int N = 16384;
     int r = 8;
-    int p = 4;  // must be less than (2^32 - 1) * hlen/MFlen
+    int p = 8;  // must be less than (2^32 - 1) * hlen/MFlen
                   // hlen = 32 (32 bytes, 256 bits)
                   // MFlen = r * 128 per RFC7914
 
