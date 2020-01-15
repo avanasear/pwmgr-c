@@ -35,10 +35,10 @@ int decrypt_mem();
 int get_pass(char * passwd, int len, int context);
 int get_key(char * passwd, unsigned char * key);
 
-int create(); // not finished yet
-int remove(); // not finished yet
-int show_all(); // not finished yet
-int get(); // not finished yet
+int create_acct(); // not finished yet
+int remove_acct(); // not finished yet
+int show_all_acct(); // not finished yet
+int get_acct(); // not finished yet
 
 int main(void){
     umask(0077);
@@ -287,19 +287,19 @@ int get_key(char * passwd, unsigned char * key){
     return 0;
 }
 
-int create(){
+int create_acct(){
     //
 }
 
-int remove(){
+int remove_acct(){
     //
 }
 
-int show_all(){
+int show_all_acct(){
     //
 }
 
-int get(){
+int get_acct(){
     //
 }
 
