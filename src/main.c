@@ -12,9 +12,11 @@
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
 
+#define MAX_SZ 2097152 // 2 MiB maximum buffer for passwords
+
 struct termios old, new;
-unsigned char plain_contents[2097152] = {0}; // 2 MiB maximum size
-unsigned char cipher_contents[2097168] = {0}; // 2 MiB maximum size + 16 B for new IV
+unsigned char plain_contents[MAX_SZ] = {0};
+unsigned char cipher_contents[MAX_SZ + 16] = {0}; // 2 MiB MAX_SZ + 16 B for new IV
 unsigned char aes_key[32] = {0}; // 256-bit key
 
 void reset_input_mode();
@@ -33,15 +35,17 @@ int decrypt_mem();
 int get_pass(char * passwd, int len, int context);
 int get_key(char * passwd, unsigned char * key);
 
-int main(){
-    char * user = getenv("USER");
-    char * homedir = getenv("HOME");
-    printf("You are %s.\nYour home directory is %s.\n", user, homedir);
+int create(); // not finished yet
+int remove(); // not finished yet
+int show_all(); // not finished yet
+int get(); // not finished yet
+
+int main(void){
     umask(0077);
 
     init();
 
-    memset(plain_contents, 0x00, 2097152);
+    memset(plain_contents, 0x00, MAX_SZ);
     memset(aes_key, 0x00, 32);
     return 0;
 }
@@ -60,13 +64,14 @@ void set_input_mode(){
         exit(1);
     }
 
-    tcgetattr(STDIN_FILENO, &old);
+    if (tcgetattr(STDIN_FILENO, &old) != 0){
+        printf("Error: can't set input mode\n");
+        exit(1);
+    }
+    new = old;
     atexit(reset_input_mode);
-    tcgetattr(STDIN_FILENO, &new);
 
-    new.c_lflag &= ~(ICANON | ECHO);
-    new.c_cc[VMIN] = 1;
-    new.c_cc[VTIME] = 0;
+    new.c_lflag &= ~ECHO;
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &new);
 }
@@ -150,7 +155,7 @@ int check_is_initialized(){
         exit(1);
     }
 
-    if (pwfile_info.st_size != 2097168){
+    if (pwfile_info.st_size != (MAX_SZ + 16)){
         printf("\nError: File is the wrong size and has been modified.\n\n");
         printf("We'll try to continue, but be aware you may have to\n");
         printf("delete and reinitialize the password file.\n\n");
@@ -180,7 +185,7 @@ int load_file(){
         perror("An error occurred while trying to load ~/.pwmgr:\n");
     }
     else {
-        fread(cipher_contents, 1, 2097168, fptr);
+        fread(cipher_contents, 1, (MAX_SZ + 16), fptr);
         fclose(fptr);
     }
 }
@@ -197,7 +202,7 @@ int write_file(){
         perror("An error occurred while trying to write ~/.pwmgr:\n");
     }
     else {
-        fwrite(cipher_contents, 1, 2097168, fptr);
+        fwrite(cipher_contents, 1, MAX_SZ + 16, fptr);
         fclose(fptr);
     }
 }
@@ -215,22 +220,22 @@ int encrypt_mem(){
     memcpy(orig_iv, iv, 16);
 
     AES_set_encrypt_key(aes_key, 256, &enc_key);
-    AES_cbc_encrypt(plain_contents, cipher_contents, 2097152, &enc_key, iv, AES_ENCRYPT);
+    AES_cbc_encrypt(plain_contents, cipher_contents, MAX_SZ, &enc_key, iv, AES_ENCRYPT);
 
-    memcpy(&cipher_contents[2097152], orig_iv, 16);
-    memset(plain_contents, 0x00, 2097152);
+    memcpy(&cipher_contents[MAX_SZ], orig_iv, 16);
+    memset(plain_contents, 0x00, MAX_SZ);
 }
 
 int decrypt_mem(){
     // Decrypt the ciphertext buf and write the result to the plaintext buf
 
     unsigned char iv[16] = {0};
-    memcpy(iv, &cipher_contents[2097152], 16);
+    memcpy(iv, &cipher_contents[MAX_SZ], 16);
 
     AES_KEY dec_key;
 
     AES_set_decrypt_key(aes_key, 256, &dec_key);
-    AES_cbc_encrypt(cipher_contents, plain_contents, 2097152, &dec_key, iv, AES_DECRYPT);
+    AES_cbc_encrypt(cipher_contents, plain_contents, MAX_SZ, &dec_key, iv, AES_DECRYPT);
 }
 
 int get_pass(char * passwd, int len, int context){
@@ -278,5 +283,23 @@ int get_key(char * passwd, unsigned char * key){
 
     EVP_PBE_scrypt(passwd, strlen(passwd), salt, sizeof(salt),
                    N, r, p, max_mem, key, 32);
+
+    return 0;
+}
+
+int create(){
+    //
+}
+
+int remove(){
+    //
+}
+
+int show_all(){
+    //
+}
+
+int get(){
+    //
 }
 
