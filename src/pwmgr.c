@@ -1,9 +1,6 @@
-#include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <dirent.h>
 #include <termios.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -40,11 +37,45 @@ int remove_acct(); // not finished yet
 int show_all_acct(); // not finished yet
 int get_acct(); // not finished yet
 
-int main(void){
+int main(int argc, char ** argv){
     umask(0077);
 
-    //create_acct(NULL, NULL, NULL);
-    init();
+    if (check_is_initialized() != 0){
+        printf("First use - initializing the pwfile.\n");
+        init();
+    }
+
+    if (argc < 2){
+        printf("Not enough arguments.\n");
+        exit(1);
+    }
+
+    if (strncmp(argv[1], "add", 3) == 0){
+        printf("add\n");
+        //use getopt() here
+    }
+    else if (strncmp(argv[1], "del", 3) == 0){
+        printf("del\n");
+        //use getopt() here
+    }
+    else if (strncmp(argv[1], "list", 4) == 0){
+        printf("list\n");
+        //use getopt() here
+    }
+    else if (strncmp(argv[1], "help", 4) == 0){
+        printf("Usage:\n\
+    %1$s add <service> [-u username] [-e email] [-p password]\n\
+        add a service to the pwfile\n\
+    %1$s del <service>\n\
+        remove a service from the pwfile\n\
+    %1$s list\n\
+        show all services\n\
+    %1$s help\n\
+        show this message\n", argv[0]);
+    }
+    else {
+        printf("Error: Unknown option: %s\n", argv[1]);
+    }
 
     memset(plain_contents, 0x00, MAX_SZ);
     memset(aes_key, 0x00, 32);
