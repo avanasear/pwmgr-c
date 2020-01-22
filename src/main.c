@@ -43,6 +43,7 @@ int get_acct(); // not finished yet
 int main(void){
     umask(0077);
 
+    //create_acct(NULL, NULL, NULL);
     init();
 
     memset(plain_contents, 0x00, MAX_SZ);
@@ -287,8 +288,43 @@ int get_key(char * passwd, unsigned char * key){
     return 0;
 }
 
-int create_acct(){
-    //
+int create_acct(char * name, char * addr, char * pass){
+    // Create an account and add it to the password file
+
+    char acct_name[128];
+    char acct_addr[128];
+    char acct_pass[128];
+
+    if (!(name)){
+        printf("Account service: ");
+        fgets(acct_name, 128, stdin);
+        printf("\n");
+    }
+    else {
+        strncpy(acct_name, name, 128);
+        acct_name[127] = '\0';
+    }
+    if (!(addr)){
+        printf("Account email/username: ");
+        fgets(acct_addr, 128, stdin);
+        printf("\n");
+    }
+    else {
+        strncpy(acct_addr, addr, 128);
+        acct_name[127] = '\0';
+    }
+    if (!(pass)){
+        printf("Account password: ");
+        fgets(acct_pass, 128, stdin);
+        printf("\n");
+    }
+    else {
+        strncpy(acct_pass, pass, 128);
+        acct_name[127] = '\0';
+    }
+
+    printf("%s\n%s\n%s\n", acct_name, acct_addr, acct_pass);
+    // don't forget to zero out acct_pass and pass
 }
 
 int remove_acct(){
