@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <string.h>
 #include <termios.h>
@@ -50,31 +51,68 @@ int main(int argc, char ** argv){
         exit(1);
     }
 
-    if (strncmp(argv[1], "add", 3) == 0){
-        printf("add\n");
-        //use getopt() here
+    int c, index;
+    char * acct_email = NULL;
+    char * acct_user = NULL;
+    char * acct_pass = NULL;
+
+    opterr = 0;
+
+    while ((c = getopt(argc, argv, "e:u:p:")) != -1){
+        switch (c) {
+            case 'e':
+                acct_email = optarg;
+                break;
+            case 'u':
+                acct_user = optarg;
+                break;
+            case 'p':
+                acct_pass = optarg;
+                break;
+            case '?':
+                if ((optopt == 'c') || (optopt == 'c') || (optopt == 'c')){
+                    printf("Error: option -%c requires an argument.\n", optopt);
+                }
+                else if (isprint(optopt)){
+                    printf("Error: unknown option '-%c'.\n", optopt);
+                }
+                else {
+                    printf("Error: unknown option character '\\x%x'.\n", optopt);
+                }
+                return 1;
+            default:
+                abort();
+        }
     }
-    else if (strncmp(argv[1], "del", 3) == 0){
-        printf("del\n");
-        //use getopt() here
-    }
-    else if (strncmp(argv[1], "list", 4) == 0){
-        printf("list\n");
-        //use getopt() here
-    }
-    else if (strncmp(argv[1], "help", 4) == 0){
-        printf("Usage:\n\
-    %1$s add <service> [-u username] [-e email] [-p password]\n\
-        add a service to the pwfile\n\
+
+    for (index = optind; index < argc; index++){
+        if (strncmp(argv[index], "add", 3) == 0){
+            printf("add\n");
+            create_acct(acct_email, acct_user, acct_pass);
+            break;
+        }
+        else if (strncmp(argv[index], "del", 3) == 0){
+            printf("del\n");
+            remove_acct();
+            break;
+        }
+        else if (strncmp(argv[index], "list", 4) == 0){
+            printf("list\n");
+            show_all_acct();
+            break;
+        }
+        else {
+            printf("Usage:\n\
+    %1$s add <service> [-e email] [-u username] [-p password]\n\
+        add an account to the manager\n\
     %1$s del <service>\n\
-        remove a service from the pwfile\n\
+        remove an account from the manager\n\
     %1$s list\n\
-        show all services\n\
+        list the accounts in the manager\n\
     %1$s help\n\
         show this message\n", argv[0]);
-    }
-    else {
-        printf("Error: Unknown option: %s\n", argv[1]);
+            break;
+        }
     }
 
     memset(plain_contents, 0x00, MAX_SZ);
@@ -319,30 +357,30 @@ int get_key(char * passwd, unsigned char * key){
     return 0;
 }
 
-int create_acct(char * name, char * addr, char * pass){
+int create_acct(char * email, char * user, char * pass){
     // Create an account and add it to the password file
 
-    char acct_name[128];
-    char acct_addr[128];
+    char acct_email[128];
+    char acct_user[128];
     char acct_pass[128];
 
-    if (!(name)){
-        printf("Account service: ");
-        fgets(acct_name, 128, stdin);
-        printf("\n");
+    if (!(email)){
+        printf("Account email: ");
+        fgets(acct_email, 128, stdin);
+        printf("%s\n", acct_email);
     }
     else {
-        strncpy(acct_name, name, 128);
-        acct_name[127] = '\0';
+        strncpy(acct_user, user, 128);
+        acct_user[127] = '\0';
     }
-    if (!(addr)){
-        printf("Account email/username: ");
-        fgets(acct_addr, 128, stdin);
-        printf("\n");
+    if (!(user)){
+        printf("Account username: ");
+        fgets(acct_user, 128, stdin);
+        printf("%s\n", acct_user);
     }
     else {
-        strncpy(acct_addr, addr, 128);
-        acct_name[127] = '\0';
+        strncpy(acct_user, user, 128);
+        acct_user[127] = '\0';
     }
     if (!(pass)){
         printf("Account password: ");
@@ -351,10 +389,9 @@ int create_acct(char * name, char * addr, char * pass){
     }
     else {
         strncpy(acct_pass, pass, 128);
-        acct_name[127] = '\0';
+        acct_pass[127] = '\0';
     }
 
-    printf("%s\n%s\n%s\n", acct_name, acct_addr, acct_pass);
     // don't forget to zero out acct_pass and pass
 }
 
